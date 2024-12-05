@@ -53,11 +53,11 @@ async function queryDnsbl(ip, dnsbl) {
 async function processBlacklist() {
   const { dnsbl, ips } = workerData;
 
-  // const results = await pMap(ips, (ip) => queryDnsbl(ip, dnsbl), {
-  //   concurrency: Infinity,
-  // });
+  const results = await pMap(ips, (ip) => queryDnsbl(ip, dnsbl), {
+    concurrency: 20,
+  });
 
-  const results = await Promise.all(ips.map((ip) => queryDnsbl(ip, dnsbl)));
+  // const results = await Promise.all(ips.map((ip) => queryDnsbl(ip, dnsbl)));
 
   const onlyBlocked = results.filter((item) => item.isBlocked);
   console.log(dnsbl, counter, errors, "errors");
