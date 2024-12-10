@@ -16,13 +16,37 @@ const dnsblServers = [
   "bl.mailspike.net",
 ];
 
-async function createWorker(index, chunk, blocklists) {
+const allResolvers = [
+  "91.202.160.2",
+  "91.202.160.9",
+  "91.202.160.19",
+  "91.202.160.5",
+  "91.202.160.11",
+  "91.202.160.10",
+  "91.202.160.8",
+  "91.202.160.12",
+  "91.202.160.3",
+  "91.202.160.16",
+  "91.202.160.18",
+  "91.202.160.4",
+  "91.202.160.13",
+  "91.202.160.14",
+  "91.202.160.6",
+  "91.202.160.20",
+  "91.202.160.17",
+  "91.202.160.77",
+  "91.202.160.152",
+  "91.202.160.154",
+];
+
+async function createWorker(index, chunk, blocklists, resolvers) {
   return new Promise((resolve, reject) => {
     const worker = new Worker(path.join(path.resolve(), "worker.js"), {
       workerData: {
         workerId: index,
         ips: chunk,
         blocklists,
+        resolvers,
       },
     });
 
@@ -39,7 +63,7 @@ async function createWorker(index, chunk, blocklists) {
 async function scanIps() {
   console.time("scan");
 
-  const cidrRanges = ["178.37.224.0/24"];
+  const cidrRanges = ["178.37.224.0/19"];
 
   const ips = cidrRanges.flatMap((cidr) => generateIpRange(cidr));
   console.log(ips.length, "IP counts");
@@ -49,9 +73,14 @@ async function scanIps() {
   const chunks = Array.from({ length: numWorkers }, (_, i) =>
     ips.slice(i * chunkSize, (i + 1) * chunkSize)
   );
+  const resolversPerWorker = Math.floor(allResolvers.length / numWorkers);
 
   const workers = chunks.map((chunk, index) => {
-    return createWorker(index + 1, chunk, dnsblServers);
+    const start = index * resolversPerWorker;
+    const end = start + resolversPerWorker;
+    const workerResolvers = allResolvers.slice(start, end);
+
+    return createWorker(index + 1, chunk, dnsblServers, workerResolvers);
   });
 
   const results = [];

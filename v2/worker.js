@@ -1,23 +1,14 @@
 import { parentPort, workerData } from "worker_threads";
 import dns from "dns/promises";
-import { shuffleResolvers } from "../utils.js";
 
 let counter = 0;
 
 const NOT_FOUND_ERR = "ENOTFOUND";
 const errors = [];
 
-const resolvers = [
-  "127.0.0.1",
-  "91.202.160.77",
-  "91.202.160.20",
-  "91.202.160.152",
-  "91.202.160.154",
-];
-
 let resolverIndex = 0;
 
-function rotateResolver(index) {
+function rotateResolver(resolvers) {
   resolverIndex = (resolverIndex + 1) % resolvers.length;
   const currentResolver = resolvers[resolverIndex];
   dns.setServers([currentResolver]);
@@ -59,24 +50,18 @@ async function queryDnsbl(ip, dnsbl) {
 }
 
 async function processBlacklist() {
-  const { workerId, ips, blocklists } = workerData;
+  const { workerId, ips, blocklists, resolvers } = workerData;
 
   const results = [];
-  const step = 4;
-
-  shuffleResolvers(resolvers);
+  const step = 200;
 
   for (let i = 0; i < ips.length; i += step) {
-    rotateResolver(i);
+    rotateResolver(resolvers);
 
     const chunk = ips.slice(i, i + step);
-    const promises = [];
-
-    chunk.forEach((ip) => {
-      for (const dnsbl of blocklists) {
-        promises.push(queryDnsbl(ip, dnsbl));
-      }
-    });
+    const promises = chunk.flatMap((ip) =>
+      blocklists.map((dnsbl) => queryDnsbl(ip, dnsbl))
+    );
 
     const chunkResults = await Promise.all(promises);
     results.push(...chunkResults);
