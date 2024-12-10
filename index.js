@@ -3,7 +3,6 @@ console.log(process.env.UV_THREADPOOL_SIZE, "threads");
 import { Worker } from "worker_threads";
 import fs from "fs";
 import path from "path";
-import OS from "os";
 
 import { execSync } from "child_process";
 import { generateIpRange } from "./utils.js";
@@ -16,10 +15,6 @@ try {
 } catch (error) {
   console.error("Error checking soft ulimit:", error);
 }
-
-// b.barracudacentral.org 10-20
-// dnsbl.justspam.org 10-20
-// all.s5h.net 20
 
 const dnsblServers = [
   "zen.spamhaus.org",
@@ -58,13 +53,12 @@ async function scanIps() {
   console.time("scan");
   // 178.37.224.0/22
 
-  const cidrRanges = ["79.110.120.0/19"];
+  const cidrRanges = ["178.37.224.0/19"];
   const ips = cidrRanges.flatMap((cidr) => generateIpRange(cidr));
   console.log(ips.length, "ip counts");
   const results = [];
 
   const counter = {};
-
   // Создаём worker для каждого DNSBL
   const workers = dnsblServers.map((dnsbl) => {
     counter[dnsbl] = 0;
@@ -85,6 +79,7 @@ async function scanIps() {
       results.push(...result);
     });
 
+    console.log(results.length, "Total blacklisted");
     // Сохраняем результаты
     const output = results.map((r) => `${r.ip},${r.dnsbl}`).join("\n");
 
@@ -96,12 +91,3 @@ async function scanIps() {
 }
 
 scanIps().catch(console.error);
-
-// console.log(generateIpRange("178.37.224.0/24"));
-
-// function reverseIp(ip) {
-//   const reversedIp = ip.split(".").reverse().join(".");
-//   console.log(reversedIp);
-// }
-
-// console.log(reverseIp("178.37.224.33"));

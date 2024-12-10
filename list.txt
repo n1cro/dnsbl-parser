@@ -1,0 +1,10 @@
+zen.spamhaus.org
+pbl.spamhaus.org
+sbl.spamhaus.org
+xbl.spamhaus.org
+all.spamrats.com
+b.barracudacentral.org
+dnsbl.justspam.org
+all.s5h.net
+dnsbl.dronebl.org
+bl.mailspike.net
