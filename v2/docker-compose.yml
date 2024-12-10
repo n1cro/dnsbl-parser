@@ -1,0 +1,14 @@
+services:
+  setup-ips-and-unbound:
+    image: alpine:latest
+    container_name: setup-ips-and-unbound
+    volumes:
+      - ./unbound-init.sh:/app/unbound-init.sh
+      - /etc/unbound:/etc/unbound
+    working_dir: /app
+    entrypoint: ["sh", "-c", "./unbound-init.sh"]
+    environment:
+      - RESOLVERS=${RESOLVERS}
+      - INTERFACE=${INTERFACE}
+    network_mode: "host"
+    privileged: true
