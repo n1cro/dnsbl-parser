@@ -51,10 +51,8 @@ start_unbound_instance() {
   unbound -c "$config_file" &
 }
 
-# Разделение списка IP (IPS) на массив
 IFS=',' read -r -a IP_ARRAY <<< "$RESOLVERS"
 
-# Основной цикл обработки IP-адресов
 for ip in "${IP_ARRAY[@]}"; do
   add_ip_to_interface "$ip"
   create_unbound_config "$ip"
