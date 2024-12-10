@@ -1,7 +1,6 @@
 import { parentPort, workerData } from "worker_threads";
-import { promisify } from "util";
 import dns from "dns/promises";
-import pMap, { pMapSkip } from "p-map";
+import { shuffleResolvers } from "./utils";
 
 let counter = 0;
 let activeRequests = 0;
@@ -22,8 +21,6 @@ const resolvers = [
 ];
 
 let resolverIndex = 0;
-let requestCount = 0;
-const N = 10; // менять резолвер после каждых 10 запросов
 
 function rotateResolver() {
   resolverIndex = (resolverIndex + 1) % resolvers.length;
@@ -39,10 +36,6 @@ function rotateResolver() {
  * @returns {Promise<{dnsbl: string, ip: string, isBlocked: boolean}>} - Result of query.
  */
 async function queryDnsbl(ip, dnsbl) {
-  if (requestCount % N === 0) {
-    rotateResolver();
-  }
-
   const reversedIp = ip.split(".").reverse().join(".");
   const query = `${reversedIp}.${dnsbl}`;
 
@@ -66,8 +59,6 @@ async function queryDnsbl(ip, dnsbl) {
       console.log(err.code, query);
       counter += 1;
     }
-  } finally {
-    requestCount++;
   }
 
   return response;
@@ -76,7 +67,22 @@ async function queryDnsbl(ip, dnsbl) {
 async function processBlacklist() {
   const { dnsbl, ips } = workerData;
 
-  const results = await Promise.all(ips.map((ip) => queryDnsbl(ip, dnsbl)));
+  const results = [];
+  const step = 10;
+
+  shuffleResolvers();
+  console.log(resolvers, "shuffled");
+
+  for (let i = 0; i < ips.length; i += step) {
+    rotateResolver();
+
+    const chunk = ips.slice(i, i + step);
+    const chunkResults = await Promise.all(
+      chunk.map((ip) => queryDnsbl(ip, dnsbl))
+    );
+
+    results.push(...chunkResults);
+  }
 
   const onlyBlocked = results.filter((item) => item.isBlocked);
   console.log(dnsbl, counter, errors, "errors");

@@ -22,3 +22,10 @@ export function generateIpRange(cidr) {
   }
   return ips;
 }
+
+export function shuffleResolvers(resolvers) {
+  for (let i = resolvers.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [resolvers[i], resolvers[j]] = [resolvers[j], resolvers[i]];
+  }
+}
