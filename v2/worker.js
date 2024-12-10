@@ -62,7 +62,7 @@ async function processBlacklist() {
   const { workerId, ips, blocklists } = workerData;
 
   const results = [];
-  const step = 100;
+  const step = 4;
 
   shuffleResolvers(resolvers);
 
@@ -70,13 +70,16 @@ async function processBlacklist() {
     rotateResolver(i);
 
     const chunk = ips.slice(i, i + step);
+    const promises = [];
 
-    for (const dnsbl of blocklists) {
-      const chunkResults = await Promise.all(
-        chunk.map((ip) => queryDnsbl(ip, dnsbl))
-      );
-      results.push(...chunkResults);
-    }
+    chunk.forEach((ip) => {
+      for (const dnsbl of blocklists) {
+        promises.push(queryDnsbl(ip, dnsbl));
+      }
+    });
+
+    const chunkResults = await Promise.all(promises);
+    results.push(...chunkResults);
   }
 
   const onlyBlocked = results.filter((item) => item.isBlocked);
