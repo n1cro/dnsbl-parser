@@ -1,6 +1,6 @@
 import { parentPort, workerData } from "worker_threads";
 import dns from "dns/promises";
-import { shuffleResolvers } from "./utils";
+import { shuffleResolvers } from "./utils.js";
 
 let counter = 0;
 let activeRequests = 0;
@@ -22,11 +22,12 @@ const resolvers = [
 
 let resolverIndex = 0;
 
-function rotateResolver() {
+function rotateResolver(index) {
   resolverIndex = (resolverIndex + 1) % resolvers.length;
   const currentResolver = resolvers[resolverIndex];
-  console.log(currentResolver, "RESOLVER");
   dns.setServers([currentResolver]);
+
+  console.log(index, currentResolver, "RESOLVER");
 }
 
 /**
@@ -66,15 +67,14 @@ async function queryDnsbl(ip, dnsbl) {
 
 async function processBlacklist() {
   const { dnsbl, ips } = workerData;
-
   const results = [];
   const step = 10;
 
-  shuffleResolvers();
+  shuffleResolvers(resolvers);
   console.log(resolvers, "shuffled");
 
   for (let i = 0; i < ips.length; i += step) {
-    rotateResolver();
+    rotateResolver(i);
 
     const chunk = ips.slice(i, i + step);
     const chunkResults = await Promise.all(
